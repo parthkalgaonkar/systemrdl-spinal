@@ -1,0 +1,13 @@
+file: (line _NEWLINE)+
+line: (term ".")* last_term
+last_term: term packed_range?
+term: CNAME unpacked_range*
+unpacked_range: "[" "0" ":" number "]"
+packed_range: "[" number ":" number "]"
+number: INT
+_NEWLINE: NEWLINE
+
+
+%import common.INT
+%import common.CNAME
+%import common.NEWLINE

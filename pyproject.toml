@@ -1,0 +1,11 @@
+[project]
+name = "systemrdl-spinal"
+version = "0.1.0"
+description = "Utility for generate spinalHDL wrapper from peakrdl"
+authors = [ ]
+requires-python = ">=3.13"
+dependencies = [
+    "peakrdl",
+    "peakrdl-regblock",
+    "lark",
+]
