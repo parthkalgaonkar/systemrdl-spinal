@@ -2,9 +2,10 @@ import os
 from pathlib import Path
 import textwrap
 import functools
-from dataclasses import dataclass
+import itertools
+from dataclasses import dataclass, replace
 from argparse import ArgumentParser, FileType
-from typing import Self
+from typing import Self, Protocol
 from .hwif_report_parser import Term, parse
 from .utils import Config, to_camel
 
@@ -14,91 +15,99 @@ bopen, bclose = "{}"
 indent = functools.partial(textwrap.indent, prefix="  ")
 
 
+class DataType(Protocol):
+    def declaration(self) -> str: ...
+    def instance(self) -> str: ...
+    def dimensions(self) -> tuple[int, ...]: ...
+
+    def instantiation(self) -> str:
+        if not self.dimensions():
+            return self.instance()
+        dimensions = ", ".join(map(str, self.dimensions()))
+        return f"Vec.fill({dimensions})({self.instance()})"
+
+
 @dataclass
-class BundleCaseClass:
-    name: str
-    inner_classes: list[Self]
-    members: dict[str, str]
-    toplevel: bool
+class VecType:
+    vec_dimensions: tuple[int, ...]
+
+    def dimensions(self):
+        return self.vec_dimensions
+
+
+@dataclass
+class SpinalBits(VecType, DataType):
+    width: int
 
     def declaration(self):
-        inner_classes = indent("\n\n".join(map(
-                lambda x: x.declaration(),
-                self.inner_classes
-                )))
-        members = indent("\n".join(map(
-                lambda item: f"val {item[0]} = {item[1]}",
-                self.members.items()
-                )))
+        raise ValueError("Primitive has no declaration")
 
-        retval = [
-                f"case class {self.data_type()}() extends Bundle {bopen}",
-                members,
-                bclose
-                ]
-        if self.inner_classes:
-            retval.insert(1, inner_classes)
+    def instance(self):
+        return f"Bits({self.width} bits)"
+
+
+@dataclass
+class SpinalBool(VecType, DataType):
+    def declaration(self):
+        raise ValueError("Primitive has no declaration")
+
+    def instance(self):
+        return f"Bool()"
+
+
+@dataclass
+class BundleCaseClass(VecType, DataType):
+    name: str
+    members: dict[str, DataType]
+
+    def declaration(self):
+        retval = [f"case class {self.name}() extends Bundle {bopen}"]
+        for member_name, member_type in self.members.items():
+            retval.append(f"  val {member_name} = {member_type.instantiation()}")
+        retval.append(bclose)
         return "\n".join(retval)
 
-    def data_type(self):
-        name = f"{self.name}_bundle"
-        if self.toplevel:
-            return to_camel(name)
-        else:
-            return name
+    def instance(self):
+        return f"{self.name}()"
 
 
 class TermVisitor:
     def walk(self, root: Term):
-        _name, _dtype, case_class = self.visit_term(root)
-        case_class.toplevel = True
-        return case_class.declaration()
+        self.stack: list[str] = list()
+        self.class_types = []
+        self.visit(root)
+        return self.class_types
 
-    def visit_term(self, term: Term) -> tuple[
-            str,
-            str,
-            BundleCaseClass | None
-            ]:
-        if term.children:
-            children = list(map(
-                    lambda x: self.visit_term(x),
-                    term.children.values()
-                    ))
-            inner_classes = list(filter(
-                    lambda x: x is not None,
-                    map(
-                        lambda x: x[2],
-                        children
-                        )
-                    ))
-            members = dict(map(
-                    lambda x: (x[0], x[1]),
-                    children
-                    ))
-            case_class = BundleCaseClass(
-                    name=term.name,
-                    inner_classes=inner_classes,
-                    members=members,
-                    toplevel=False,
-                    )
-            data_type = f"{case_class.data_type()}()"
-        else:
-            case_class = None
-            # Base case is no children
-            if term.packed is None:
-                data_type = "Bool()"
-            else:
-                data_type = f"Bits({term.packed} bits)"
-
+    def visit(self, term: Term) -> DataType:
         assert len(term.unpacked) <= 5, "SpinalHDL allows max 5 dimensions"
+        self.stack.append(term.name)
+        retval = self.visit_term(term)
+        self.stack.pop()
+        if not self.stack:
+            retval.name = to_camel(retval.name)
+        return retval
 
-        if term.unpacked:
-            unpacked_flat = ", ".join(map(str, term.unpacked))
-            vec_type = f"Vec.fill({unpacked_flat})({data_type})"
+    def visit_term(self, term: Term) -> DataType:
+        newtype_name = "__".join(self.stack) + "_bundle"
+        if term.children:
+            children = dict(map(
+                lambda item: (item[0], self.visit(item[1])),
+                term.children.items(),
+                ))
+            retval = BundleCaseClass(
+                    name=newtype_name,
+                    members=children,
+                    vec_dimensions=term.unpacked
+                    )
+            self.class_types.append(retval)
+            return retval
+        elif term.packed is not None:
+            return SpinalBits(
+                    width=int(term.packed),
+                    vec_dimensions=term.unpacked,
+                    )
         else:
-            vec_type = data_type
-
-        return term.name, vec_type, case_class
+            return SpinalBool(vec_dimensions=term.unpacked)
 
 
 def generate(structures: dict[str, Term], config: Config):
@@ -110,7 +119,13 @@ def generate(structures: dict[str, Term], config: Config):
             import spinal.core._
             import systemrdl_spinal._
             """).lstrip()
-    classes = "\n\n".join(map(lambda x: visitor.walk(x), structures.values()))
+    classes = "\n\n".join(map(
+            lambda c: c.declaration(),
+            functools.reduce(
+                lambda a, b: a + b,
+                map(lambda x: visitor.walk(x), structures.values())
+                )
+            ))
 
     component_name = to_camel(config.module_name)
     component_decl = textwrap.dedent(
