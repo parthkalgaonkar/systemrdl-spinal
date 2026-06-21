@@ -1,6 +1,6 @@
 [project]
 name = "systemrdl-spinal"
-version = "0.1.0"
+version = "0.1.1"
 description = "Utility for generate spinalHDL wrapper from peakrdl"
 authors = [ ]
 requires-python = ">=3.11"
