@@ -143,9 +143,7 @@ def generate(structures: dict[str, Term], config: Config):
             object {component_name} extends App {bopen}
               class {component_name}Top extends Component {bopen}
                 val io = new Bundle {bopen}
-                  val cpuif = slave PeakrdlCpuIf(
-                    {config.addr_width}, {config.data_width}
-                  )
+                  val cpuif = slave(PeakrdlCpuIf({config.addr_width}, {config.data_width}))
                   val hwif_in = in (HwifInBundle())
                   val hwif_out = out (HwifOutBundle())
                 {bclose}
