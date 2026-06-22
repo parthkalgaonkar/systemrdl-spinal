@@ -143,7 +143,7 @@ def generate(structures: dict[str, Term], config: Config):
             object {component_name} extends App {bopen}
               class {component_name}Top extends Component {bopen}
                 val io = new Bundle {bopen}
-                  val cpuif = PeakrdlCpuIf(
+                  val cpuif = slave PeakrdlCpuIf(
                     {config.addr_width}, {config.data_width}
                   )
                   val hwif_in = in (HwifInBundle())
