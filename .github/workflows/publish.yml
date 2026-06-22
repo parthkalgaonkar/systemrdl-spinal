@@ -7,6 +7,7 @@
 # documentation.
 
 name: Upload Python Package
+on: push
 permissions:
   contents: read
 jobs:
