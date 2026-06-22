@@ -2,3 +2,4 @@ out/
 obj_dir/
 __pycache__/
 gen/
+*.egg-info/

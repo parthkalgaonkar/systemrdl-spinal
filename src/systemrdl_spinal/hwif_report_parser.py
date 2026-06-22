@@ -66,9 +66,22 @@ class HwifReportTransformer(lark.Transformer):
 
 
 def get_parser():
-    grammars = Path(__file__).resolve().parent / "grammars"
-    with open(grammars / "hwif_report.lark") as f:
-        return lark.Lark(f.read(), start="file", propagate_positions=True)
+    grammar = """
+        file: (line _NEWLINE)+
+        line: (term ".")* last_term
+        last_term: term packed_range?
+        term: CNAME unpacked_range*
+        unpacked_range: "[" "0" ":" number "]"
+        packed_range: "[" number ":" number "]"
+        number: INT
+        _NEWLINE: NEWLINE
+
+
+        %import common.INT
+        %import common.CNAME
+        %import common.NEWLINE
+        """
+    return lark.Lark(grammar, start="file", propagate_positions=True)
 
 
 def handle_error(file, err):

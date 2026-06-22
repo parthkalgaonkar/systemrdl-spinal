@@ -1,11 +1,32 @@
 [project]
 name = "systemrdl-spinal"
-version = "0.1.1"
-description = "Utility for generate spinalHDL wrapper from peakrdl"
-authors = [ ]
+description = "Utility for generate spinalHDL wrapper from systemrdl"
+authors = [
+    { name = "Parth Kalgaonkar", email = "parthkalgaonkar@gmail.com" },
+    ]
 requires-python = ">=3.11"
+readme = "README.md"
 dependencies = [
     "peakrdl",
     "peakrdl-regblock",
     "lark",
-]
+    ]
+dynamic = ["version"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    ]
+license = "GPL-3.0-or-later"
+license-files = "COPYING"
+
+urls = {
+    Homepage = "https://github.com/parthkalgaonkar/systemrdl-spinal",
+    }
+
+[build-system]
+requires = [
+    "setuptools>=80",
+    "setuptools-scm[simple]>=9.2",
+    "build",
+    ]
+build-backend = "setuptools.build_meta"
