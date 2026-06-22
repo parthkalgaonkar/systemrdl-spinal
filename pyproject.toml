@@ -17,11 +17,10 @@ classifiers = [
     "Operating System :: OS Independent",
     ]
 license = "GPL-3.0-or-later"
-license-files = "COPYING"
+license-files = ["COPYING"]
 
-urls = {
-    Homepage = "https://github.com/parthkalgaonkar/systemrdl-spinal",
-    }
+[project.urls]
+Homepage = "https://github.com/parthkalgaonkar/systemrdl-spinal"
 
 [build-system]
 requires = [
