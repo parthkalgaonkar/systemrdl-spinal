@@ -117,6 +117,7 @@ def generate(structures: dict[str, Term], config: Config):
             package {config.package_name}
 
             import spinal.core._
+            import spinal.lib._
             import systemrdl_spinal._
             """).lstrip()
     classes = "\n\n".join(map(
